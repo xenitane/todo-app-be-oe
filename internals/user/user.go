@@ -13,9 +13,16 @@ type UserSignUpReq struct {
 	LastName  string `json:"lastName" validate:"required,min=4,max=50,alpha"`
 }
 
-type UserSignInIn struct {
+type UserSignInReq struct {
 	Username string `json:"username" validate:"required"`
 	Password string `json:"password" validate:"required"`
+}
+
+type UserUpdateReq struct {
+	FirstName *string `json:"firstName"`
+	LastName  *string `json:"lastName"`
+	Password  *string `json:"password"`
+	IsAdmin   *bool   `json:"isAdmin"`
 }
 
 type User struct {
@@ -43,4 +50,13 @@ func NewFromReg(u *UserSignUpReq) (*User, error) {
 
 func (u *User) MatchPassword(password string) bool {
 	return nil == bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+}
+
+func (u *User) UpdatePassword(password string) error {
+	hashedPasswordBytes, err := bcrypt.GenerateFromPassword([]byte(password), 7)
+	if err != nil {
+		return err
+	}
+	u.Password = string(hashedPasswordBytes)
+	return nil
 }

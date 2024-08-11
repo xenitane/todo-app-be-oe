@@ -2,10 +2,12 @@ package server
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	xenmw "github.com/xenitane/todo-app-be-oe/internals/middleware"
+	"github.com/xenitane/todo-app-be-oe/internals/user"
 )
 
 func (s *Server) RegisterUserRoutes(g *echo.Group) {
@@ -46,9 +48,123 @@ func (s *Server) HandleAllUsers(c echo.Context) error {
 }
 
 func (s *Server) HandleUserByUserName(c echo.Context) error {
+	token, ok := c.Get("user").(*jwt.Token)
+	if !ok {
+		return &echo.HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "JWT MISSING",
+		}
+	}
+	claims, ok := token.Claims.(*xenmw.JWTCustomClaims)
+	if !ok {
+		return &echo.HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "failed to cast claims",
+		}
+	}
+	if claims.Username != c.Param("username") && !claims.IsAdmin {
+		return &echo.HTTPError{
+			Code:    http.StatusUnauthorized,
+			Message: "you don't have permission",
+		}
+	}
+	user, err := s.db.GetUserByUserName(c.Param("username"))
+	if err != nil {
+		return err
+	}
+	c.JSON(http.StatusOK, user)
 	return nil
 }
 
 func (s *Server) HandleUpdateUser(c echo.Context) error {
+	token, ok := c.Get("user").(*jwt.Token)
+	if !ok {
+		return &echo.HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "JWT MISSING",
+		}
+	}
+	claims, ok := token.Claims.(*xenmw.JWTCustomClaims)
+	if !ok {
+		return &echo.HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "failed to cast claims",
+		}
+	}
+	if claims.Username != c.Param("username") && !claims.IsAdmin {
+		return &echo.HTTPError{
+			Code:    http.StatusUnauthorized,
+			Message: "you don't have permission",
+		}
+	}
+	u, err := s.db.GetUserByUserName(c.Param("username"))
+	if err != nil {
+		return err
+	}
+	userUpdateReq := new(user.UserUpdateReq)
+	if err := c.Bind(userUpdateReq); err != nil {
+		return &echo.HTTPError{
+			Code:     http.StatusUnprocessableEntity,
+			Message:  "error binding request body",
+			Internal: err,
+		}
+	}
+	flag := false
+	if userUpdateReq.FirstName != nil {
+		*userUpdateReq.FirstName = strings.TrimSpace(*userUpdateReq.FirstName)
+		lenNewFN := len(*userUpdateReq.FirstName)
+		if lenNewFN > 3 && lenNewFN < 51 && *userUpdateReq.FirstName != u.FirstName {
+			flag = true
+			u.FirstName = *userUpdateReq.FirstName
+		}
+	}
+	if userUpdateReq.LastName != nil {
+		*userUpdateReq.LastName = strings.TrimSpace(*userUpdateReq.LastName)
+		lenNewLN := len(*userUpdateReq.LastName)
+		if lenNewLN > 3 && lenNewLN < 51 && *userUpdateReq.LastName != u.LastName {
+			flag = true
+			u.LastName = *userUpdateReq.LastName
+		}
+	}
+	if userUpdateReq.Password != nil && !u.MatchPassword(*userUpdateReq.Password) {
+		lenNewPW := len(*userUpdateReq.Password)
+		if lenNewPW < 8 || lenNewPW > 72 {
+			return &echo.HTTPError{
+				Code:    http.StatusBadRequest,
+				Message: "password length not appropriate",
+			}
+		}
+		if err := u.UpdatePassword(*userUpdateReq.Password); err != nil {
+			return &echo.HTTPError{
+				Code:     http.StatusInternalServerError,
+				Message:  "some issue with your password",
+				Internal: err,
+			}
+		}
+		flag = true
+	}
+
+	if userUpdateReq.IsAdmin != nil {
+		if !claims.IsAdmin {
+			return &echo.HTTPError{
+				Code:    http.StatusUnauthorized,
+				Message: "you are unauth",
+			}
+		}
+		u.IsAdmin = *userUpdateReq.IsAdmin
+		flag = true
+	}
+
+	if flag {
+		if err := s.db.UpadteUser(u); err != nil {
+			return &echo.HTTPError{
+				Code:     http.StatusInternalServerError,
+				Message:  "internal server error",
+				Internal: err,
+			}
+		}
+	}
+	c.JSON(http.StatusOK, u)
+
 	return nil
 }

@@ -13,8 +13,8 @@ import (
 )
 
 func (s *Server) RegisterAuthRoutes(g *echo.Group) {
-	g.POST("/signup", s.HandleSignup)
-	g.POST("/signin", s.handleSignin)
+	g.POST("/signup/", s.HandleSignup)
+	g.POST("/signin/", s.handleSignin)
 }
 
 func (s *Server) HandleSignup(c echo.Context) error {
@@ -53,13 +53,13 @@ func (s *Server) HandleSignup(c echo.Context) error {
 			Internal: err,
 		}
 	}
-
+	u.CreatedAt = time.Now()
 	c.JSON(http.StatusCreated, u)
 	return nil
 }
 
 func (s *Server) handleSignin(c echo.Context) error {
-	userReq := new(user.UserSignInIn)
+	userReq := new(user.UserSignInReq)
 	if err := c.Bind(userReq); err != nil {
 		return &echo.HTTPError{
 			Code:     http.StatusUnprocessableEntity,
@@ -100,6 +100,9 @@ func (s *Server) handleSignin(c echo.Context) error {
 	}
 
 	c.Response().Header().Add("x-token-auth", t)
-	c.JSON(http.StatusCreated, user)
+	c.JSON(http.StatusCreated, map[string]any{
+		"user":  user,
+		"token": t,
+	})
 	return nil
 }

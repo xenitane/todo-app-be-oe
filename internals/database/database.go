@@ -22,7 +22,7 @@ type Service interface {
 	InsertUser(*user.User) error
 	GetUserByUserName(string) (*user.User, error)
 	GetAllUsers() ([]*user.User, error)
-	// UpadteUser(*user.User)(*user.user,error)
+	UpadteUser(*user.User) error
 }
 
 type service struct {

@@ -6,6 +6,12 @@ import (
 	"github.com/xenitane/todo-app-be-oe/internals/user"
 )
 
+func (s *service) UpadteUser(u *user.User) error {
+	updateQry := `update users set (first_name, last_name, password, is_admin)=($2, $3, $4, $5) where username = $1`
+	_, err := s.db.Exec(updateQry, u.Username, u.FirstName, u.LastName, u.Password, u.IsAdmin)
+	return err
+}
+
 func (s *service) GetAllUsers() ([]*user.User, error) {
 	query := `select * from users`
 	rows, err := s.db.Query(query)

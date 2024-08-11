@@ -22,6 +22,7 @@ func Logger() echo.MiddlewareFunc {
 					context.Background(),
 					slog.LevelInfo,
 					"REQUEST",
+					slog.String("method", c.Request().Method),
 					slog.String("uri", v.URI),
 					slog.Int("status", v.Status),
 				)
@@ -30,6 +31,7 @@ func Logger() echo.MiddlewareFunc {
 					context.Background(),
 					slog.LevelError,
 					"REQUEST_ERROR",
+					slog.String("method", c.Request().Method),
 					slog.String("uri", v.URI),
 					slog.Int("status", v.Status),
 					slog.String("err", v.Error.Error()),
