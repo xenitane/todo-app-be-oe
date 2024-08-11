@@ -32,7 +32,7 @@ type User struct {
 	FirstName string    `json:"firstName"`
 	LastName  string    `json:"lastName"`
 	IsAdmin   bool      `json:"isAdmin"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 func NewFromReg(u *UserSignUpReq) (*User, error) {

@@ -70,7 +70,11 @@ func (s *Server) HandleUserByUserName(c echo.Context) error {
 	}
 	user, err := s.db.GetUserByUserName(c.Param("username"))
 	if err != nil {
-		return err
+		return &echo.HTTPError{
+			Code:     http.StatusNotFound,
+			Message:  "This user does not exist",
+			Internal: err,
+		}
 	}
 	c.JSON(http.StatusOK, user)
 	return nil
@@ -99,7 +103,11 @@ func (s *Server) HandleUpdateUser(c echo.Context) error {
 	}
 	u, err := s.db.GetUserByUserName(c.Param("username"))
 	if err != nil {
-		return err
+		return &echo.HTTPError{
+			Code:     http.StatusNotFound,
+			Message:  "the user you are trying to modify does not exist",
+			Internal: err,
+		}
 	}
 	userUpdateReq := new(user.UserUpdateReq)
 	if err := c.Bind(userUpdateReq); err != nil {
@@ -130,7 +138,7 @@ func (s *Server) HandleUpdateUser(c echo.Context) error {
 		lenNewPW := len(*userUpdateReq.Password)
 		if lenNewPW < 8 || lenNewPW > 72 {
 			return &echo.HTTPError{
-				Code:    http.StatusBadRequest,
+				Code:    http.StatusUnprocessableEntity,
 				Message: "password length not appropriate",
 			}
 		}
@@ -148,22 +156,33 @@ func (s *Server) HandleUpdateUser(c echo.Context) error {
 		if !claims.IsAdmin {
 			return &echo.HTTPError{
 				Code:    http.StatusUnauthorized,
-				Message: "you are unauth",
+				Message: "you are unauthorized for this method",
+			}
+		}
+		if u.Username == claims.Username {
+			return &echo.HTTPError{
+				Code:    http.StatusTeapot,
+				Message: "you cannot demote yourself",
 			}
 		}
 		u.IsAdmin = *userUpdateReq.IsAdmin
 		flag = true
 	}
 
-	if flag {
-		if err := s.db.UpadteUser(u); err != nil {
-			return &echo.HTTPError{
-				Code:     http.StatusInternalServerError,
-				Message:  "internal server error",
-				Internal: err,
-			}
+	if !flag {
+		return &echo.HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "invalid request body",
 		}
 	}
+	if err := s.db.UpadteUser(u); err != nil {
+		return &echo.HTTPError{
+			Code:     http.StatusInternalServerError,
+			Message:  "internal server error",
+			Internal: err,
+		}
+	}
+
 	c.JSON(http.StatusOK, u)
 
 	return nil

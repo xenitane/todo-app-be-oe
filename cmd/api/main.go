@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+
 	server := server.New()
 
 	fmt.Printf("starting server at port %v\n", os.Getenv("PORT"))

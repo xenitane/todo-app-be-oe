@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	_ "github.com/joho/godotenv/autoload"
 	"github.com/xenitane/todo-app-be-oe/internals/database"
 )
 
@@ -25,6 +24,9 @@ func New() *http.Server {
 		v:    validator.New(),
 		db:   database.New(),
 	}
+
+	NewServer.v.RegisterValidation("not-stale", validateDateNotStale)
+
 	return &http.Server{
 		Addr:         fmt.Sprintf(":%d", NewServer.port),
 		Handler:      NewServer.RegisterRoutes(),
@@ -32,4 +34,12 @@ func New() *http.Server {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
+}
+
+func validateDateNotStale(fl validator.FieldLevel) bool {
+	ts, ok := fl.Field().Interface().(time.Time)
+	if !ok {
+		return false
+	}
+	return !ts.Before(time.Now().Round(0))
 }

@@ -96,7 +96,11 @@ func (s *Server) handleSignin(c echo.Context) error {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	t, err := token.SignedString([]byte(os.Getenv("JWT_SIGNING_KEY")))
 	if err != nil {
-		return err
+		return &echo.HTTPError{
+			Internal: err,
+			Code:     http.StatusInternalServerError,
+			Message:  "An error occoured",
+		}
 	}
 
 	c.Response().Header().Add("x-token-auth", t)

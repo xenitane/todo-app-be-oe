@@ -69,4 +69,7 @@ watch:
 	    fi; \
 	fi
 
-.PHONY: all build run test clean
+dev:
+	@make -j2 docker-run watch
+
+.PHONY: all build run test clean dev

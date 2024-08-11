@@ -10,6 +10,7 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/xenitane/todo-app-be-oe/internals/todo"
 	"github.com/xenitane/todo-app-be-oe/internals/user"
 )
 
@@ -18,11 +19,17 @@ type Service interface {
 	Close() error
 
 	// user related queries
-	// UserExistsByUserName(string) bool
 	InsertUser(*user.User) error
 	GetUserByUserName(string) (*user.User, error)
 	GetAllUsers() ([]*user.User, error)
 	UpadteUser(*user.User) error
+
+	// to-do related queries
+	GetAllTodosForUser(int64) ([]*todo.Todo, error)
+	InsertTodo(*todo.Todo) error
+	GetTodoByIDForUser(int64, int64) (*todo.Todo, error)
+	DeleteTodoByIDForUser(int64, int64) error
+	UpdateTodoByIdForUser(*todo.Todo) error
 }
 
 type service struct {
@@ -82,9 +89,25 @@ func (s *service) initDb() error {
 			created_at timestamp default now()
 		);`
 
-	_, err := s.db.Exec(query)
+	if _, err := s.db.Exec(query); err != nil {
+		return err
+	}
 
-	return err
+	query = `create table if not exists todos(
+		id serial primary key,
+		owner_id int not null,
+		title varchar(50) not null,
+		description varchar(320),
+		status smallint default 0,
+		due_date timestamp not null,
+		created_at timestamp default now(),
+		constraint fk_owner foreign key(owner_id) references users(id) on delete cascade on update cascade
+	);`
+	if _, err := s.db.Exec(query); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *service) Health() map[string]string {

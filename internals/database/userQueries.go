@@ -30,11 +30,7 @@ func (s *service) GetAllUsers() ([]*user.User, error) {
 }
 
 func (s *service) InsertUser(u *user.User) error {
-	insertQry := `
-		insert into
-		users (username,first_name,last_name,password,is_admin)
-		values ($1, $2, $3, $4, $5);
-		`
+	insertQry := `insert into users (username,first_name,last_name,password,is_admin)	values ($1, $2, $3, $4, $5);`
 	_, err := s.db.Query(
 		insertQry,
 		u.Username,
@@ -43,11 +39,9 @@ func (s *service) InsertUser(u *user.User) error {
 		u.Password,
 		u.IsAdmin,
 	)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
+
 func (s *service) GetUserByUserName(username string) (*user.User, error) {
 	query := `select * from users where username = $1`
 	rows, err := s.db.Query(query, username)

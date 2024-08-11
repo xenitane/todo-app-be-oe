@@ -14,7 +14,10 @@ func (s *Server) RegisterRoutes() http.Handler {
 	e.Use(middleware.Recover())
 	e.Use(xenmw.Logger())
 	e.Use(xenmw.CORS())
-	e.Use(middleware.AddTrailingSlashWithConfig(middleware.TrailingSlashConfig{Skipper: middleware.DefaultSkipper, RedirectCode: 302}))
+	e.Use(middleware.AddTrailingSlashWithConfig(middleware.TrailingSlashConfig{
+		Skipper:      middleware.DefaultSkipper,
+		RedirectCode: http.StatusFound,
+	}))
 
 	e.GET("/", s.HiHandler)
 	e.GET("/health/", s.HealthHandler)
