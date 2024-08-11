@@ -7,12 +7,14 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/xenitane/todo-app-be-oe/internals/database"
 )
 
 type Server struct {
 	port int
+	v    *validator.Validate
 	db   database.Service
 }
 
@@ -20,6 +22,7 @@ func New() *http.Server {
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
 	NewServer := &Server{
 		port: port,
+		v:    validator.New(),
 		db:   database.New(),
 	}
 	return &http.Server{

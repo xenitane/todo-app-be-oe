@@ -73,7 +73,7 @@ func TestHealth(t *testing.T) {
 	stats := srv.Health()
 
 	if stats["status"] != "up" {
-		log.Fatalf("expected pg status to be `up`, got %s", stats["status"])
+		t.Fatalf("expected pg status to be `up`, got %s", stats["status"])
 	}
 	if _, ok := stats["error"]; ok {
 		t.Fatalf("expected error not to be present")

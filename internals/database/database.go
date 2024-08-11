@@ -10,12 +10,19 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	_ "github.com/joho/godotenv/autoload"
+	"github.com/xenitane/todo-app-be-oe/internals/user"
 )
 
 type Service interface {
 	Health() map[string]string
 	Close() error
+
+	// user related queries
+	// UserExistsByUserName(string) bool
+	InsertUser(*user.User) error
+	GetUserByUserName(string) (*user.User, error)
+	GetAllUsers() ([]*user.User, error)
+	// UpadteUser(*user.User)(*user.user,error)
 }
 
 type service struct {
@@ -38,11 +45,10 @@ func New() Service {
 		return dbInstance
 	}
 
-	dbInstance = &service{
-		db: nil,
-	}
+	fmt.Println("connecting to database")
+
 	connStr := fmt.Sprintf(
-		"postgers://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s",
+		"user=%s password=%s host=%s port=%s dbname=%s sslmode=disable search_path=%s",
 		username,
 		password,
 		host,
@@ -54,9 +60,31 @@ func New() Service {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	dbInstance.db = db
+	dbInstance = &service{
+		db: db,
+	}
+
+	if err := dbInstance.initDb(); err != nil {
+		log.Fatalf("error while initializing database: %v", err)
+	}
 
 	return dbInstance
+}
+
+func (s *service) initDb() error {
+	query := `create table if not exists users(
+			id serial primary key,
+			username varchar(20) not null unique,
+			first_name varchar(50) not null,
+			last_name varchar(50) not null,
+			password varchar(80) not null,
+			is_admin boolean default false,
+			created_at timestamp default now()
+		);`
+
+	_, err := s.db.Exec(query)
+
+	return err
 }
 
 func (s *service) Health() map[string]string {
@@ -65,7 +93,8 @@ func (s *service) Health() map[string]string {
 
 	stats := make(map[string]string)
 
-	if err := s.db.PingContext(ctx); err != nil {
+	err := s.db.PingContext(ctx)
+	if err != nil {
 		stats["status"] = "down"
 		stats["error"] = fmt.Sprintf("db down: %v", err)
 		log.Fatalf("db down: %v", err)
@@ -102,9 +131,6 @@ func (s *service) Health() map[string]string {
 	}
 
 	return stats
-}
-
-func (s *service) checkPostgresHealth(ctx context.Context, stats map[string]string) {
 }
 
 func (s *service) Close() error {
